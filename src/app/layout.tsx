@@ -51,15 +51,21 @@ export default function RootLayout({
         <nav className="p-2 flex flex-row justify-between sticky top-1 backdrop-blur-xl border rounded-md">
           <Link href="#">
             <Button variant={"ghost"} size={"sm"}>
-              <Menu className="mr-4 h-4 w-4" /> Leaderbord (Coming Soon)
+              <Menu className="mr-4 h-4 w-4" />{" "}
+              <span className="hidden sm:inline-block">
+                Leaderbord (Coming Soon)
+              </span>
             </Button>
           </Link>
-          <h1 className="text-3xl md:text-5xl font-bold text-gray-100 animate-pulse">
+          <h1 className="text-xl sm:text-3xl sm:block font-bold text-gray-100 animate-pulse">
             TecHBK - Tetris
           </h1>
           <Link target="_blank" href="https://wa.me/+27642448112">
             <Button variant={"ghost"} size={"sm"}>
-              <MessageSquare className="mr-4 h-4 w-4" /> Tell me what you think
+              <MessageSquare className="mr-4 h-4 w-4" />{" "}
+              <span className="hidden sm:inline-block">
+                Tell me what you think
+              </span>
             </Button>
           </Link>
         </nav>

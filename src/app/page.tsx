@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Move } from "lucide-react";
+import { ArrowDown, Megaphone, Move } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type TetrominoType = "0" | "I" | "J" | "L" | "O" | "S" | "T" | "Z";
 type TetrominoShape = (TetrominoType | 0)[][];
@@ -450,7 +451,6 @@ export default function Component() {
       onTouchStart={handleTouchStart}
       tabIndex={0}
     >
-      
       <div className="mt-4 md:mt-6 text-xs md:text-sm  max-w-md text-center bg-white p-2 rounded-lg mb-6">
         Use{" "}
         <Badge variant={"secondary"} className="py-1">
@@ -510,10 +510,19 @@ export default function Component() {
           Game Over
         </div>
       ) : null}
+      <Alert className="sm:hidden">
+        <Megaphone className="h-4 w-4" />
+        <AlertTitle>Heads up!</AlertTitle>
+        <AlertDescription>
+          This game is best played on a desktop browsers. I will add mobile
+          support when I get the chance to work on this again👍🏼.
+        </AlertDescription>
+      </Alert>
       <div className="mt-4 md:mt-6 text-xl md:text-2xl font-semibold text-gray-200">
         Score: {score}
       </div>
-      <Button onClick={startGame}>
+
+      <Button className="hidden sm:block" onClick={startGame}>
         {gameOver ? "Restart Game" : "Start Game"}
       </Button>
     </div>
