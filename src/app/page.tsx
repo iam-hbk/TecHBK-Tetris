@@ -445,7 +445,7 @@ export default function Component() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-screen  p-4"
+      className="flex flex-col items-center justify-center  p-4"
       onKeyDown={move}
       onTouchStart={handleTouchStart}
       tabIndex={0}
