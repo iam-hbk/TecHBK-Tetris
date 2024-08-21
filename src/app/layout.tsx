@@ -48,7 +48,7 @@ export default function RootLayout({
           fontSans.variable
         )}
       >
-        <nav className="p-2 flex flex-row justify-between sticky top-1 backdrop-blur-xl border rounded-md">
+        <nav className="p-2 z-10 flex flex-row justify-between sticky top-1 backdrop-blur-xl border rounded-md">
           <Link href="#">
             <Button variant={"ghost"} size={"sm"}>
               <Menu className="mr-4 h-4 w-4" />{" "}
