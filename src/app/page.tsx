@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, Megaphone, Move } from "lucide-react";
+import { ArrowDown, Megaphone, Move, Skull, SkullIcon, TrophyIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -446,7 +446,11 @@ export default function Component() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center  p-4"
+      className={cn({
+        "flex flex-col items-center justify-center relative p-4": true,
+        "backdrop-blur-xl backdrop-brightness-50": gameOver,
+
+      })}
       onKeyDown={move}
       onTouchStart={handleTouchStart}
       tabIndex={0}
@@ -506,9 +510,15 @@ export default function Component() {
         />
       </div>
       {gameOver ? (
-        <div className="mt-4 md:mt-8 text-xl md:text-2xl font-semibold text-red-500 animate-bounce">
-          Game Over
-        </div>
+        <Alert className="absolute border-destructive border-2 max-w-sm animate-bounce">
+          <SkullIcon className="h-4 w-4 text-destructive" />
+          <AlertTitle>Game Over!</AlertTitle>
+          <AlertDescription>
+            You lost `¯\_(ツ)_/¯`. Your score was {score}. Wonder if you can
+            beat it next time? <br/><br />
+            <TrophyIcon className="h-4 w-4 mr-1 inline-block"/> You will be able to benchmark your score against others soon.
+          </AlertDescription>
+        </Alert>
       ) : null}
       <Alert className="sm:hidden">
         <Megaphone className="h-4 w-4" />
