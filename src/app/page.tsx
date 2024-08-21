@@ -1,113 +1,470 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import React, { useState, useEffect, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+
+type TetrominoType = '0' | 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z'
+type TetrominoShape = (TetrominoType | 0)[][]
+type TetrominoColor = string
+
+interface Tetromino {
+  shape: TetrominoShape
+  color: TetrominoColor
+}
+
+type Stage = [TetrominoType | 0, string][][]
+
+interface Player {
+  pos: { x: number; y: number }
+  tetromino: TetrominoShape
+  collided: boolean
+}
+
+const TETROMINOS: Record<TetrominoType, Tetromino> = {
+  '0': { shape: [[0]], color: '209, 213, 219' },
+  'I': {
+    shape: [
+      [0, 'I', 0, 0],
+      [0, 'I', 0, 0],
+      [0, 'I', 0, 0],
+      [0, 'I', 0, 0],
+    ],
+    color: '59, 130, 246',
+  },
+  'J': {
+    shape: [
+      [0, 'J', 0],
+      [0, 'J', 0],
+      ['J', 'J', 0],
+    ],
+    color: '99, 102, 241',
+  },
+  'L': {
+    shape: [
+      [0, 'L', 0],
+      [0, 'L', 0],
+      [0, 'L', 'L'],
+    ],
+    color: '245, 158, 11',
+  },
+  'O': {
+    shape: [
+      ['O', 'O'],
+      ['O', 'O'],
+    ],
+    color: '252, 211, 77',
+  },
+  'S': {
+    shape: [
+      [0, 'S', 'S'],
+      ['S', 'S', 0],
+      [0, 0, 0],
+    ],
+    color: '16, 185, 129',
+  },
+  'T': {
+    shape: [
+      [0, 0, 0],
+      ['T', 'T', 'T'],
+      [0, 'T', 0],
+    ],
+    color: '236, 72, 153',
+  },
+  'Z': {
+    shape: [
+      ['Z', 'Z', 0],
+      [0, 'Z', 'Z'],
+      [0, 0, 0],
+    ],
+    color: '239, 68, 68',
+  },
+}
+
+const STAGE_WIDTH = 12
+const STAGE_HEIGHT = 20
+const INITIAL_DROP_TIME = 1000
+const MINIMUM_DROP_TIME = 100
+const POINTS_PER_ROW = 10
+const SPEED_INCREASE_FACTOR = 0.995
+
+const createStage = (): Stage =>
+  Array.from(Array(STAGE_HEIGHT), () => Array(STAGE_WIDTH).fill([0, 'clear']))
+
+const randomTetromino = (): Tetromino => {
+  const tetrominos: TetrominoType[] = ['I', 'J', 'L', 'O', 'S', 'T', 'Z']
+  const randTetromino = tetrominos[Math.floor(Math.random() * tetrominos.length)]
+  return TETROMINOS[randTetromino]
+}
+
+const calculateDropTime = (score: number): number => {
+  return Math.max(
+    INITIAL_DROP_TIME * Math.pow(SPEED_INCREASE_FACTOR, score),
+    MINIMUM_DROP_TIME
+  )
+}
+
+interface TetrominoPreviewProps {
+  tetromino: Tetromino | null
+  title: string
+}
+
+const TetrominoPreview: React.FC<TetrominoPreviewProps> = ({ tetromino, title }) => {
+  const tetrominoStage: Stage = Array.from(Array(4), () =>
+    Array(4).fill([0, 'clear'])
+  )
+
+  if (tetromino && tetromino.shape) {
+    tetromino.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell !== 0) {
+          tetrominoStage[y][x] = [cell, 'clear']
+        }
+      })
+    })
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+    <div className="border-2 border-gray-700 bg-gray-800 p-2 md:p-4 rounded-lg shadow-lg">
+      <h2 className="text-sm md:text-lg font-semibold mb-1 md:mb-2 text-gray-200">{title}</h2>
+      <div className="grid grid-cols-4 gap-[1px]">
+        {tetrominoStage.map((row, y) =>
+          row.map((cell, x) => (
+            <div
+              key={`${y}-${x}`}
+              className="w-4 h-4 md:w-6 md:h-6 border border-gray-700 rounded-sm transition-all duration-150 ease-in-out"
+              style={{
+                background:
+                  cell[0] === 0
+                    ? 'rgba(26, 32, 44, 0.8)'
+                    : `rgba(${TETROMINOS[cell[0] as TetrominoType].color}, 0.8)`,
+                boxShadow:
+                  cell[0] !== 0
+                    ? 'inset 0 0 5px rgba(255,255,255,0.5)'
+                    : 'none',
+                transform: cell[0] !== 0 ? 'scale(1.02)' : 'scale(1)',
+              }}
             />
-          </a>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function Component() {
+  const [dropTime, setDropTime] = useState<number | null>(null)
+  const [gameOver, setGameOver] = useState(false)
+  const [score, setScore] = useState(0)
+  const [stage, setStage] = useState<Stage>(createStage())
+  const [player, setPlayer] = useState<Player>({
+    pos: { x: 0, y: 0 },
+    tetromino: TETROMINOS['0'].shape,
+    collided: false,
+  })
+  const [nextTetromino, setNextTetromino] = useState<Tetromino>(randomTetromino())
+  const [heldTetromino, setHeldTetromino] = useState<Tetromino | null>(null)
+  const [canHold, setCanHold] = useState(true)
+
+  const movePlayer = (dir: number) => {
+    if (!checkCollision(player, stage, { x: dir, y: 0 })) {
+      updatePlayerPos({ x: dir, y: 0 })
+    }
+  }
+
+  const startGame = () => {
+    setStage(createStage())
+    setDropTime(INITIAL_DROP_TIME)
+    resetPlayer()
+    setScore(0)
+    setGameOver(false)
+    setNextTetromino(randomTetromino())
+    setHeldTetromino(null)
+    setCanHold(true)
+  }
+
+  const drop = () => {
+    if (!checkCollision(player, stage, { x: 0, y: 1 })) {
+      updatePlayerPos({ x: 0, y: 1, collided: false })
+    } else {
+      if (player.pos.y < 1) {
+        setGameOver(true)
+        setDropTime(null)
+      }
+      updatePlayerPos({ x: 0, y: 0, collided: true })
+    }
+  }
+
+  const dropPlayer = () => {
+    drop()
+  }
+
+  const move = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!gameOver) {
+        if (e.key === 'ArrowLeft') {
+          movePlayer(-1)
+        } else if (e.key === 'ArrowRight') {
+          movePlayer(1)
+        } else if (e.key === 'ArrowDown') {
+          dropPlayer()
+        } else if (e.key === 'ArrowUp') {
+          playerRotate(stage, 1)
+        } else if (e.key === 'c' || e.key === 'C') {
+          holdTetromino()
+        }
+      }
+    },
+    [gameOver, stage]
+  )
+
+  const updatePlayerPos = ({ x, y, collided }: { x: number; y: number; collided?: boolean }) => {
+    setPlayer((prev) => ({
+      ...prev,
+      pos: { x: prev.pos.x + x, y: prev.pos.y + y },
+      collided: collided ?? prev.collided,
+    }))
+  }
+
+  const resetPlayer = useCallback(() => {
+    setPlayer({
+      pos: { x: STAGE_WIDTH / 2 - 2, y: 0 },
+      tetromino: nextTetromino.shape,
+      collided: false,
+    })
+    setNextTetromino(randomTetromino())
+    setCanHold(true)
+  }, [nextTetromino])
+
+  const holdTetromino = () => {
+    if (!canHold || gameOver) return
+
+    const currentTetrominoType = player.tetromino[0].find((cell) => cell !== 0) as TetrominoType
+    if (!currentTetrominoType) return
+
+    const currentTetromino = TETROMINOS[currentTetrominoType]
+    let nextShape: TetrominoShape
+
+    if (heldTetromino) {
+      nextShape = heldTetromino.shape
+      setHeldTetromino(currentTetromino)
+    } else {
+      nextShape = nextTetromino.shape
+      setHeldTetromino(currentTetromino)
+      setNextTetromino(randomTetromino())
+    }
+
+    setPlayer({
+      pos: { x: STAGE_WIDTH / 2 - 2, y: 0 },
+      tetromino: nextShape,
+      collided: false,
+    })
+
+    setCanHold(false)
+  }
+
+  const checkCollision = (
+    player: Player,
+    stage: Stage,
+    { x: moveX, y: moveY }: { x: number; y: number }
+  ): boolean => {
+    for (let y = 0; y < player.tetromino.length; y += 1) {
+      for (let x = 0; x < player.tetromino[y].length; x += 1) {
+        if (player.tetromino[y][x] !== 0) {
+          if (
+            !stage[y + player.pos.y + moveY] ||
+            !stage[y + player.pos.y + moveY][x + player.pos.x + moveX] ||
+            stage[y + player.pos.y + moveY][x + player.pos.x + moveX][1] !== 'clear'
+          ) {
+            return true
+          }
+        }
+      }
+    }
+    return false
+  }
+
+  const playerRotate = (stage: Stage, dir: number) => {
+    const clonedPlayer = JSON.parse(JSON.stringify(player)) as Player
+    clonedPlayer.tetromino = rotate(clonedPlayer.tetromino, dir)
+
+    const pos = clonedPlayer.pos.x
+    let offset = 1
+    while (checkCollision(clonedPlayer, stage, { x: 0, y: 0 })) {
+      clonedPlayer.pos.x += offset
+      offset = -(offset + (offset > 0 ? 1 : -1))
+      if (offset > clonedPlayer.tetromino[0].length) {
+        rotate(clonedPlayer.tetromino, -dir)
+        clonedPlayer.pos.x = pos
+        return
+      }
+    }
+
+    setPlayer(clonedPlayer)
+  }
+
+  const rotate = (matrix: TetrominoShape, dir: number): TetrominoShape => {
+    const rotatedTetro = matrix.map((_, index) =>
+      matrix.map((col) => col[index])
+    )
+    if (dir > 0) return rotatedTetro.map((row) => row.reverse())
+    return rotatedTetro.reverse()
+  }
+
+  const sweepRows = (newStage: Stage): Stage => {
+    let rowsCleared = 0
+    const sweepedStage = newStage.reduce((ack, row) => {
+      if (row.findIndex((cell) => cell[0] === 0) === -1) {
+        rowsCleared += 1
+        ack.unshift(new Array(newStage[0].length).fill([0, 'clear']))
+        return ack
+      }
+      ack.push(row)
+      return ack
+    }, [] as Stage)
+
+    if (rowsCleared > 0) {
+      setScore((prev) => {
+        const newScore = prev + rowsCleared * POINTS_PER_ROW
+        setDropTime(calculateDropTime(newScore))
+        return newScore
+      })
+    }
+
+    return sweepedStage
+  }
+
+  useEffect(() => {
+    if (!gameOver) {
+      const interval = setInterval(() => {
+        drop()
+      }, dropTime ?? INITIAL_DROP_TIME)
+      return () => {
+        clearInterval(interval)
+      }
+    }
+  }, [drop, dropTime, gameOver])
+
+  useEffect(() => {
+    const updateStage = (prevStage: Stage): Stage => {
+      const newStage = prevStage.map((row) =>
+        row.map((cell) => (cell[1] === 'clear' ? [0, 'clear'] : cell))
+      )
+
+      player.tetromino.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            newStage[y + player.pos.y][x + player.pos.x] = [
+              value,
+              `${player.collided ? 'merged' : 'clear'}`,
+            ]
+          }
+        })
+      })
+
+      if (player.collided) {
+        resetPlayer()
+        return sweepRows(newStage as Stage)
+      }
+
+      return newStage as Stage
+    }
+
+    setStage((prev) => updateStage(prev))
+  }, [player, resetPlayer])
+
+  // Touch controls
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0]
+    const startX = touch.clientX
+    const startY = touch.clientY
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      const diffX = touch.clientX - startX
+      const diffY = touch.clientY - startY
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Horizontal swipe
+        if (diffX > 0) {
+          movePlayer(1)
+        } else {
+          movePlayer(-1)
+        }
+      } else {
+        // Vertical swipe
+        if (diffY > 0) {
+          dropPlayer()
+        } else {
+          playerRotate(stage, 1)
+        }
+      }
+    }
+
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+
+    document.addEventListener('touchmove', handleTouchMove)
+    document.addEventListener('touchend', handleTouchEnd)
+  }, [movePlayer, dropPlayer, playerRotate, stage])
+
+  return (
+    <div
+      className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-600 via-purple-400 to-orange-400 px-4"
+      onKeyDown={move}
+      onTouchStart={handleTouchStart}
+      tabIndex={0}
+    >
+      <h1 className="text-3xl md:text-5xl font-bold mb-4 md:mb-8 text-gray-100 animate-pulse">
+        TecHBK - Tetris
+      </h1>
+      <div className="mt-4 md:mt-6 text-xs md:text-sm text-gray-400 max-w-md text-center">
+        Use arrow keys to move and rotate. Down arrow to drop faster. Press 'C' to hold/swap Tetromino.
+        On mobile, swipe left/right to move, down to drop, and up to rotate.
+      </div>
+      <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-4">
+        <TetrominoPreview tetromino={heldTetromino} title="Hold" />
+        <div className="border-4 border-gray-600 bg-gray-800 p-1 rounded-lg shadow-2xl">
+          {stage.map((row, y) => (
+            <div key={y} className="flex">
+              {row.map((cell, x) => (
+                <div
+                  key={x}
+                  className="w-5 h-5 md:w-6 md:h-6 border border-gray-700 rounded-sm transition-all duration-150 ease-in-out"
+                  style={{
+                    background:
+                      cell[0] === 0
+                        ? 'rgba(26, 32, 44, 0.8)'
+                        : `rgba(${TETROMINOS[cell[0] as TetrominoType].color}, 0.8)`,
+                    boxShadow:
+                      cell[0] !== 0
+                        ? 'inset 0 0 5px rgba(255,255,255,0.5)'
+                        : 'none',
+                    transform: cell[0] !== 0 ? 'scale(1.02)' : 'scale(1)',
+                  }}
+                />
+              ))}
+            </div>
+          ))}
         </div>
+        <TetrominoPreview tetromino={nextTetromino} title="Next" />
       </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+      {gameOver ? (
+        <div className="mt-4 md:mt-8 text-xl md:text-2xl font-semibold text-red-500 animate-bounce">
+          Game Over
+        </div>
+      ) : null}
+      <div className="mt-4 md:mt-6 text-xl md:text-2xl font-semibold text-gray-200">
+        Score: {score}
       </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+      <Button
+        className="mt-4 md:mt-6 px-4 md:px-6 py-2 md:py-3 text-base md:text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        onClick={startGame}
+      >
+        {gameOver ? 'Restart Game' : 'Start Game'}
+      </Button>
+      
+    </div>
+  )
 }
