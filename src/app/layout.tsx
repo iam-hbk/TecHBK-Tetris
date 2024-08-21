@@ -1,31 +1,36 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Urbanist as FontSans } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
-
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 export const metadata: Metadata = {
   title: {
-    default: 'TecHBK-Tetris',
-    template: '%s | TecHBK-Tetris',
+    default: "TecHBK-Tetris",
+    template: "%s | TecHBK-Tetris",
   },
-  description: 'Try and beat the highest score and be the best TecHBK-Tetris player!',
+  description:
+    "Try and beat the highest score and be the best TecHBK-Tetris player!",
   openGraph: {
     title: {
-      default: 'TecHBK-Tetris',
-      template: '%s | TecHBK-Tetris',
+      default: "TecHBK-Tetris",
+      template: "%s | TecHBK-Tetris",
     },
-    description: 'Try and beat the highest score and be the best TecHBK-Tetris player!',
+    description:
+      "Try and beat the highest score and be the best TecHBK-Tetris player!",
     images: [
       {
-        url: '/default-og-image.png',
+        url: "/default-og-image.png",
         width: 1200,
         height: 630,
-        alt: 'TecHBK-Tetris',
+        alt: "TecHBK-Tetris",
       },
     ],
   },
-}
+};
 
 export default function RootLayout({
   children,
@@ -34,7 +39,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          fontSans.variable
+        )}
+      >
+        {children}
+      </body>
     </html>
   );
 }
