@@ -3,6 +3,7 @@ import { Urbanist as FontSans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Analytics } from '@vercel/analytics/react';
 import { Button } from "@/components/ui/button";
 import { Menu, MessageSquare } from "lucide-react";
 
@@ -70,6 +71,7 @@ export default function RootLayout({
           </Link>
         </nav>
         {children}
+        <Analytics />
       </body>
     </html>
   );
